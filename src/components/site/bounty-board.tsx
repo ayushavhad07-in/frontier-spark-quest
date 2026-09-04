@@ -12,6 +12,8 @@ export const bountiesQueryOptions = {
   queryFn: () => listBounties(),
 };
 
+export { listBounties };
+
 export function BountyCard({ bounty }: { bounty: Bounty }) {
   return (
     <motion.article
@@ -71,8 +73,10 @@ function BountySkeleton() {
   );
 }
 
-export function BountyBoard() {
-  const { data, isPending, isError } = useQuery(bountiesQueryOptions);
+export function BountyBoard({ initialBounties }: { initialBounties?: Bounty[] }) {
+  const { data, isPending, isError } = useQuery(
+    initialBounties ? { ...bountiesQueryOptions, initialData: initialBounties } : bountiesQueryOptions,
+  );
 
   return (
     <section id="bounty-board" className="px-5 py-20 sm:px-8">
