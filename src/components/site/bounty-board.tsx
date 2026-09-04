@@ -1,121 +1,18 @@
+import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import paper from "@/assets/paper.jpg";
 import { motion, staggerContainer, staggerItem } from "./motion-primitives";
 import { SectionHeading } from "./section-heading";
+import { listBounties, type Bounty } from "@/lib/sparkathon.functions";
 
-export type Bounty = {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  territory: string;
-  difficulty: "Greenhorn" | "Ranger" | "Outlaw";
-  status: "Open" | "Claimed";
-  reward: string;
+export type { Bounty };
+
+export const bountiesQueryOptions = {
+  queryKey: ["bounties"] as const,
+  queryFn: () => listBounties(),
 };
 
-// Placeholder data for Phase 1.
-const bounties: Bounty[] = [
-  {
-    id: "fintech-01",
-    title: "Wanted: Solution Required",
-    description: "Fraud slips through the wire before the ledger ever settles.",
-    category: "Risk",
-    territory: "Fintech",
-    difficulty: "Outlaw",
-    status: "Open",
-    reward: "₹40,000",
-  },
-  {
-    id: "healthcare-01",
-    title: "Wanted: Solution Required",
-    description: "Rural clinics lose patient history between every visit.",
-    category: "Data",
-    territory: "Healthcare",
-    difficulty: "Ranger",
-    status: "Open",
-    reward: "₹35,000",
-  },
-  {
-    id: "logistics-01",
-    title: "Wanted: Solution Required",
-    description: "Last-mile routes buckle the moment the weather turns.",
-    category: "Optimisation",
-    territory: "Logistics",
-    difficulty: "Ranger",
-    status: "Open",
-    reward: "₹30,000",
-  },
-  {
-    id: "energy-01",
-    title: "Wanted: Solution Required",
-    description: "Micro-grids waste stored power with no demand forecast.",
-    category: "Forecasting",
-    territory: "Energy",
-    difficulty: "Outlaw",
-    status: "Claimed",
-    reward: "₹45,000",
-  },
-  {
-    id: "agritech-01",
-    title: "Wanted: Solution Required",
-    description: "Crop disease is spotted a fortnight too late.",
-    category: "Vision",
-    territory: "Agritech",
-    difficulty: "Greenhorn",
-    status: "Open",
-    reward: "₹25,000",
-  },
-  {
-    id: "retail-01",
-    title: "Wanted: Solution Required",
-    description: "Shelf stock counts drift from the system within hours.",
-    category: "Operations",
-    territory: "Retail",
-    difficulty: "Greenhorn",
-    status: "Open",
-    reward: "₹25,000",
-  },
-  {
-    id: "mobility-01",
-    title: "Wanted: Solution Required",
-    description: "Fleet drivers get no warning before a breakdown.",
-    category: "Predictive",
-    territory: "Mobility",
-    difficulty: "Ranger",
-    status: "Open",
-    reward: "₹32,000",
-  },
-  {
-    id: "edtech-01",
-    title: "Wanted: Solution Required",
-    description: "Learners drop off and nobody notices for weeks.",
-    category: "Engagement",
-    territory: "Edtech",
-    difficulty: "Greenhorn",
-    status: "Claimed",
-    reward: "₹22,000",
-  },
-  {
-    id: "insurance-01",
-    title: "Wanted: Solution Required",
-    description: "Claim documents take five humans to read.",
-    category: "Automation",
-    territory: "Insurance",
-    difficulty: "Ranger",
-    status: "Open",
-    reward: "₹34,000",
-  },
-  {
-    id: "climate-01",
-    title: "Wanted: Solution Required",
-    description: "Emission reporting relies on spreadsheets and guesswork.",
-    category: "Analytics",
-    territory: "Climate",
-    difficulty: "Outlaw",
-    status: "Open",
-    reward: "₹42,000",
-  },
-];
+export { listBounties };
 
 export function BountyCard({ bounty }: { bounty: Bounty }) {
   return (
@@ -158,26 +55,67 @@ export function BountyCard({ bounty }: { bounty: Bounty }) {
           <dd className="font-bold">{bounty.reward}</dd>
         </div>
       </dl>
+
+      <Link
+        to="/bounties/$id"
+        params={{ id: bounty.id }}
+        className="mt-6 inline-block font-stencil text-[0.7rem] tracking-[0.18em] uppercase underline underline-offset-4 opacity-80 transition-opacity hover:opacity-100"
+      >
+        Read the Poster
+      </Link>
     </motion.article>
   );
 }
 
-export function BountyBoard() {
+function BountySkeleton() {
+  return (
+    <div className="h-72 animate-pulse rounded-sm border border-border/60 bg-card/50" aria-hidden />
+  );
+}
+
+export function BountyBoard({ initialBounties }: { initialBounties?: Bounty[] }) {
+  const { data, isPending, isError } = useQuery(
+    initialBounties ? { ...bountiesQueryOptions, initialData: initialBounties } : bountiesQueryOptions,
+  );
+
   return (
     <section id="bounty-board" className="px-5 py-20 sm:px-8">
       <div className="mx-auto max-w-6xl">
         <SectionHeading eyebrow="Claim your target" title="The Bounty Board" />
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.1 }}
-          className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          {bounties.map((bounty) => (
-            <BountyCard key={bounty.id} bounty={bounty} />
-          ))}
-        </motion.div>
+
+        {isPending && (
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <BountySkeleton key={index} />
+            ))}
+          </div>
+        )}
+
+        {isError && (
+          <p className="mt-12 text-center font-stencil text-sm text-rust" role="alert">
+            The board couldn't be reached. Try again in a moment.
+          </p>
+        )}
+
+        {!isPending && !isError && data.length === 0 && (
+          <p className="mt-12 text-center font-stencil text-sm text-muted-foreground">
+            No bounties posted yet — check back before the ride out.
+          </p>
+        )}
+
+        {!isPending && !isError && data.length > 0 && (
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
+            className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {data.map((bounty) => (
+              <BountyCard key={bounty.id} bounty={bounty} />
+            ))}
+          </motion.div>
+        )}
       </div>
     </section>
   );
