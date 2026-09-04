@@ -5,7 +5,7 @@ import { Stats } from "@/components/site/stats";
 import { FrontierRoles } from "@/components/site/frontier-roles";
 import { Journey } from "@/components/site/journey";
 import { Registration } from "@/components/site/registration";
-import { BountyBoard } from "@/components/site/bounty-board";
+import { BountyBoard, bountiesQueryOptions } from "@/components/site/bounty-board";
 import { FinalCta } from "@/components/site/final-cta";
 import { Contact } from "@/components/site/contact";
 import { Footer } from "@/components/site/footer";
@@ -25,6 +25,7 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  loader: ({ context }) => context.queryClient.ensureQueryData(bountiesQueryOptions),
   component: Index,
 });
 

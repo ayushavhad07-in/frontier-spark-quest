@@ -1,19 +1,38 @@
 import { useState, type FormEvent } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { motion, Reveal } from "./motion-primitives";
+import { submitContactMessage } from "@/lib/sparkathon.functions";
 
 const fieldClass =
   "w-full rounded-sm border border-input bg-background/60 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/70 transition-colors hover:border-gold/60 focus:border-gold focus:ring-2 focus:ring-ring/40 focus:outline-none";
 
 const labelClass = "eyebrow mb-2 block text-muted-foreground";
 
-export function Contact() {
-  // Phase 1: UI only.
-  const [sent, setSent] = useState(false);
+type Status = { kind: "idle" | "loading" } | { kind: "success" | "error"; message: string };
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+export function Contact() {
+  const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const sendMessage = useServerFn(submitContactMessage);
+
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSent(true);
+    const form = event.currentTarget;
+    const values = Object.fromEntries(new FormData(form).entries());
+
+    setStatus({ kind: "loading" });
+    try {
+      const result = await sendMessage({ data: values });
+      setStatus({ kind: result.ok ? "success" : "error", message: result.message });
+      if (result.ok) form.reset();
+    } catch {
+      setStatus({
+        kind: "error",
+        message: "Please check your name, email and message, then try again.",
+      });
+    }
   };
+
+  const loading = status.kind === "loading";
 
   return (
     <section id="contact" className="px-5 py-20 sm:px-8">
@@ -79,15 +98,21 @@ export function Contact() {
             </div>
             <motion.button
               type="submit"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="justify-self-start rounded-sm bg-rust px-8 py-3.5 text-xs font-bold tracking-[0.2em] text-primary-foreground uppercase"
+              disabled={loading}
+              whileHover={{ scale: loading ? 1 : 1.02 }}
+              whileTap={{ scale: loading ? 1 : 0.98 }}
+              className="justify-self-start rounded-sm bg-rust px-8 py-3.5 text-xs font-bold tracking-[0.2em] text-primary-foreground uppercase disabled:opacity-60"
             >
-              Send
+              {loading ? "Sending…" : "Send"}
             </motion.button>
-            {sent && (
+            {status.kind === "success" && (
               <p className="text-sm text-gold" role="status">
-                Messages aren't delivered yet — this form goes live in a later phase.
+                {status.message}
+              </p>
+            )}
+            {status.kind === "error" && (
+              <p className="text-sm text-rust" role="alert">
+                {status.message}
               </p>
             )}
           </form>
